@@ -27,9 +27,15 @@ fun NotesScreen(
     vm: NotesViewModel = viewModel()
 ) {
     val notes by vm.notes.collectAsState()
-    var input by rememberSaveable { mutableStateOf("") }
+
+    // Modifikasi: form input punya 2 field (title & note)
+    var inputTitle by rememberSaveable { mutableStateOf("") }
+    var inputNote by rememberSaveable { mutableStateOf("") }
+
+    // Modifikasi: state edit juga punya 2 field (title & note)
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var editingText by rememberSaveable { mutableStateOf("") }
+    var editingTitle by rememberSaveable { mutableStateOf("") }
+    var editingNote by rememberSaveable { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -39,22 +45,33 @@ fun NotesScreen(
         Text(text = "Catatan Saya", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
 
-        // Form input (CREATE)
+        // Form input (CREATE): title & note, tombol Tambah di kanan (seperti modul)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                label = { Text("Catatan baru") },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                OutlinedTextField(
+                    value = inputTitle,
+                    onValueChange = { inputTitle = it },
+                    label = { Text("Judul baru") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = inputNote,
+                    onValueChange = { inputNote = it },
+                    label = { Text("Catatan baru") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             Button(onClick = {
-                vm.addNote(input)
-                input = ""
+                vm.addNote(inputTitle, inputNote)
+                inputTitle = ""
+                inputNote = ""
             }) {
                 Icon(
                     painter = painterResource(R.drawable.ic_add),
@@ -82,10 +99,12 @@ fun NotesScreen(
                 items(notes, key = { it.id }) { note ->
                     if (editingId == note.id) {
                         NoteItemEditing(
-                            text = editingText,
-                            onTextChange = { editingText = it },
+                            title = editingTitle,
+                            note = editingNote,
+                            onTitleChange = { editingTitle = it },
+                            onNoteChange = { editingNote = it },
                             onSave = {
-                                vm.updateNote(note, editingText)
+                                vm.updateNote(note, editingTitle, editingNote)
                                 editingId = null
                             },
                             onCancel = { editingId = null }
@@ -95,7 +114,8 @@ fun NotesScreen(
                             note = note,
                             onEdit = {
                                 editingId = note.id
-                                editingText = note.title
+                                editingTitle = note.title
+                                editingNote = note.note
                             },
                             onDelete = { vm.deleteNote(note) }
                         )
@@ -107,6 +127,7 @@ fun NotesScreen(
     }
 }
 
+// Modifikasi: list menampilkan title, note, dan ID
 @Composable
 fun NoteItem(
     note: Note,
@@ -115,7 +136,12 @@ fun NoteItem(
 ) {
     ListItem(
         headlineContent = { Text(note.title) },
-        supportingContent = { Text("ID: ${note.id}") },
+        supportingContent = {
+            Column {
+                Text(note.note)
+                Text("ID: ${note.id}")
+            }
+        },
         trailingContent = {
             Row {
                 IconButton(onClick = onEdit) {
@@ -135,10 +161,13 @@ fun NoteItem(
     )
 }
 
+// Modifikasi: form edit berisi 2 field (title & note)
 @Composable
 fun NoteItemEditing(
-    text: String,
-    onTextChange: (String) -> Unit,
+    title: String,
+    note: String,
+    onTitleChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -148,13 +177,23 @@ fun NoteItemEditing(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChange,
-            label = { Text("Ubah catatan") },
-            singleLine = true,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("Ubah judul") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(4.dp))
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                label = { Text("Ubah catatan") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         IconButton(onClick = onSave) {
             Icon(
                 painterResource(R.drawable.ic_check), "Simpan",
@@ -171,6 +210,12 @@ fun NoteItemEditing(
 @Composable
 fun NoteItemPreview() {
     NotesAppTheme {
-        NoteItem(note = Note(id = 1, title = "Belajar Room Database"))
+        NoteItem(
+            note = Note(
+                id = 1,
+                title = "Belajar Room Database",
+                note = "Entity, DAO, dan Database"
+            )
+        )
     }
 }
